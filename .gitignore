@@ -1,0 +1,7 @@
+*.swp
+META-INF/
+bin/
+.project
+.settings/
+.classpath
+build.properties
