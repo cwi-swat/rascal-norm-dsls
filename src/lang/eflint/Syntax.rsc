@@ -4,17 +4,21 @@ extend lang::std::Layout;
 
 extend lang::expr::records::Syntax;
 
-syntax Spec = Standard Phrase Standard;
+syntax Spec = Standard Decl Standard;
+syntax Script = Standard Command Standard;
 
-syntax Phrase = TypeDecl | Placeholder | assoc Phrase Phrase;
+syntax Decl = TypeDecl | Placeholder | assoc Decl Decl;
 
-syntax Placeholder = "Placeholder" ID "For" ID;
+syntax Command = Statement | Query | assoc Command Command; 
+
 syntax Query = "?" BoolExpression;
 syntax Statement = "+" OptForeach
                  | "-" OptForeach
                  | "Force" OptForeach
                  | OptForeach
                  ;
+
+syntax Placeholder = "Placeholder" ID "For" ID;
 syntax TypeDecl 
   = "Fact" ID "Identified by" TypeExpression InstanceConstraint? DerivationClause?
   | "Act" ID "Actor" Var ("Recipient" Var)? RelatedTo? InstanceConstraint? PreConditions? PostConditions DerivationClause?
