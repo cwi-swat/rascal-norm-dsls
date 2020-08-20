@@ -1,0 +1,94 @@
+//Person (cId: id) = {<alice>,<bob>,<chloe>,<david>,<allen>,<admin>}
+Citizen (cId: id) = {<ci1>,<ci2>,<ci3>,<ci4>}
+Candidate (cId: id) = {<ca1>,<ca2>}
+Admin (cId: id) = {<a1>}
+Alice (cId: id) = {<ci1>}
+Bob (cId: id) = {<ci2>}
+Chloe (cId: id) = {<ci3>}
+Fiona (cId: id) = {<ci4>}
+David (cId: id) = {<ca1>}
+Ellen (cId: id) = {<ca2>}
+State (sId: id) >= {<s1>} <= {<s1>..<s7>}
+order (cur:id, nxt:id) <= {<s1,s2>,<s2,s3>,<s3,s4>,<s4,s5>,<s5,s6>,<s6,s7>}
+first (sId: id) = {<s1>}
+Action (action: id) = {<cast_vote>,<declare_winner>}
+CastVote (action: id) = {<cast_vote>}
+//EnableVote (action: id) = {<enable_vote>}
+DeclareWinner (action: id) = {<declare_winner>}
+happened (cur: id, nxt: id, action: id) <= {<s1,s2,cast_vote>,<s2,s3,cast_vote>,<s3,s4,cast_vote>,<s4,s5,cast_vote>,<s5,s6,cast_vote>,<s6,s7,cast_vote>,
+                                            //<s1,s2,enable_vote>,<s2,s3,enable_vote>,<s3,s4,enable_vote>,<s4,s5,enable_vote>,
+                                            <s1,s2,declare_winner>,<s2,s3,declare_winner>,<s3,s4,declare_winner>,<s4,s5,declare_winner>,<s5,s6,declare_winner>,<s6,s7,declare_winner>}     
+Voter (sId: id, citizen: id) <= {<s1,ci1>..<s7,ci4>}
+CanCastVote (sId: id, citizen: id, admin: id, candidate: id) <= {<s1,ci1,a1,ca1>..<s7,ci4,a1,ca2>}
+//CanDeclareWinner (sId: id, admin: id, candidate: id) <= {<s1,a1,ca1>,<s5,a1,ca2>}
+Vote (sId: id, citizen: id, candidate: id) <= {<s1,ci1,ca1>..<s7,ci4,ca2>}
+Winner (sId: id, candidate: id) <= {<s1,ca1>..<s7,ca2>}
+///////// Constraints
+order ⊆ State[sId as cur] ⨯ State[sId as nxt]
+State ⊆ (first[sId as cur] ⨝ *<cur,nxt>order)[nxt -> sId]
+Voter ⊆ State ⨯ Citizen[cId as citizen]
+Winner ⊆ State ⨯ Candidate[cId as candidate]
+Vote ⊆ State ⨯ Citizen[cId as citizen] ⨯ Candidate[cId as candidate]
+happened ⊆ order ⨯ Action
+CanCastVote ⊆ State ⨯ Citizen[cId as citizen] ⨯ Admin[cId as admin] ⨯ Candidate[cId as candidate]
+pred hasVoted [state: (sId: id), citizen: (cId:id)] 
+  = (state ⨯ citizen) ⊆ Vote[sId->sId, citizen->cId]
+pred doVote [cur: (sId: id), nxt: (sId:id), citizen: (citizen:id), admin: (admin: id), candidate: (candidate: id)]
+  = // Preconditions
+    ((cur ⨯ citizen ⨯ admin ⨯ candidate) ⊆ CanCastVote) ∧ 
+    ((cur ⨯ citizen) ⊆ Voter) ∧ 
+    (¬ hasVoted[cur, citizen[citizen as cId]]) ∧ 
+    // Postconditions
+    (nxt ⨯ citizen ⨯ candidate) ⊆ Vote
+pred CandidateWithMostVotesWins[cur: (sId:id), candidate: (candidate: id)]
+  = let nrOfVotes = (Vote ⨝ cur ⨝ candidate)[citizen][count() as nrOfVotes] |
+    some nrOfVotes where nrOfVotes > 0 ∧ 
+    (∀ other ∈ Candidate ∖ candidate[candidate as cId] | 
+      some ((Vote ⨝ cur ⨝ other[cId as candidate])[citizen][count() as otherNrOfVotes] ⨯ nrOfVotes) 
+        where otherNrOfVotes < nrOfVotes)   
+pred doDeclareWinner [cur: (sId: id), nxt: (sId:id), admin: (admin: id), candidate: (candidate: id)]
+  = // Preconditions
+    (Vote ⨝ cur)[citizen->cId] = Citizen ∧ 
+    no (Winner ⨝ cur) ∧ 
+    CandidateWithMostVotesWins[cur, candidate] ∧ 
+    // Postcondition
+    (Winner ⨝ nxt)[candidate] = candidate
+pred CastVoteTrans[cur: (sId:id), nxt: (sId:id)] 
+  = (((cur[sId as cur] ⨯ nxt[sId as nxt]) ⨝ happened)[action] = CastVote ⇒ 
+      (∃ ci ∈ Citizen, ad ∈ Admin, ca ∈ Candidate | 
+        doVote[cur, nxt, ci[cId as citizen], ad[cId as admin], ca[cId as candidate]] ∧ 
+        (Vote ⨝ nxt)[candidate, citizen] = (Vote ⨝ cur)[candidate, citizen] ∪ (ca[cId as candidate] ⨯ ci[cId as citizen])
+      )
+    ) ∧ 
+    // Frame condition is something else happened then Cast Vote 
+    (((cur[sId as cur] ⨯ nxt[sId as nxt]) ⨝ happened)[action] ≠ CastVote ⇒
+      (Vote ⨝ nxt)[candidate,citizen] = (Vote ⨝ cur)[candidate,citizen]
+    )
+pred DeclareWinnerTrans[cur: (sId:id), nxt: (sId:id)] 
+  = (((cur[sId as cur] ⨯ nxt[sId as nxt]) ⨝ happened)[action] = DeclareWinner ⇒ 
+      (∃ ad ∈ Admin, ca ∈ Candidate | 
+        doDeclareWinner[cur, nxt, ad[cId as admin], ca[cId as candidate]] ∧ 
+        (Winner ⨝ nxt)[candidate] = (Winner ⨝ cur)[candidate] ∪ ca[cId as candidate]
+      ) 
+    ) ∧ 
+    // Frame condition is something else happened then Cast Vote 
+    (((cur[sId as cur] ⨯ nxt[sId as nxt]) ⨝ happened)[action] ≠ DeclareWinner ⇒
+      (Winner ⨝ nxt)[candidate] = (Winner ⨝ cur)[candidate]
+    )
+pred EnableVoterTrans[cur: (sId:id), nxt: (sId:id)]
+  = (Voter ⨝ cur)[citizen] = (Voter ⨝ nxt)[citizen]
+∀ o ∈ order | let cur = o[cur->sId], nxt = o[nxt->sId] | (
+  // Transition function
+  one (o ⨝ happened) ∧ 
+  CastVoteTrans[cur,nxt] ∧ 
+  DeclareWinnerTrans[cur,nxt] ∧ 
+  EnableVoterTrans[cur,nxt] 
+)
+// Initial state
+no (first ⨝ Vote)
+(first ⨝ Voter)[citizen->cId] = Citizen
+(first ⨝ CanCastVote)[citizen, admin, candidate] = Citizen[cId as citizen] ⨯ Admin[cId as admin] ⨯ Candidate[cId as candidate]
+// Goal function
+∃ o ∈ order | (o ⨝ happened)[action] = DeclareWinner  
+//some (order[count() as nrOfSteps]) where nrOfSteps > 5
+objectives: minimize order[count()]
