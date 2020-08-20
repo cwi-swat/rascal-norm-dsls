@@ -1,0 +1,53 @@
+% event calculus axioms
+clipped(T1,F,T2) :- time(T1), time(T), time(T2), % NOTE: adding event(E) causes loop
+  T1 <= T, % TODO: why not T1 = T?  maybe because of time-gaps?
+  T  <  T2,
+  happens(E,T),
+  terminates(E,F,T),
+  not initiates(E,F,T). % creation preferred over termination
+
+holdsAt(F,T2) :- time(T1), time(T2), 
+  T1 < T2,
+  holdsAt(F,T1), 
+  not clipped(T1,F,T2).
+
+holdsAt(F,T2) :- time(T1), time(T2), % NOTE: adding event(E) causes loop 
+  T1 < T2, 
+  happens(E,T1), 
+  initiates(E,F,T1), 
+  not clipped(T1,F,T2).
+
+derivedAt(X,T) :- holdsAt(X,T).
+
+fluent(X) :- person(X).
+person(alice).
+person(bob).
+person(chloe).
+person(david).
+
+% #domain person(Person).
+% #domain person(Parent).
+% #domain person(Child).
+
+fluent(natural_parent(Parent,Child))  :- person(Parent), person(Child). 
+fluent(adoptive_parent(Parent,Child)) :- person(Parent), person(Child). 
+fluent(legal_parent(Parent,Child))    :- person(Parent), person(Child). 
+
+derivedAt(legal_parent(Parent,Child),T) :- derivedAt(natural_parent(Parent,Child),T).
+derivedAt(legal_parent(Parent,Child),T) :- derivedAt(adoptive_parent(Parent,Child),T).
+
+time(0..5).
+holdsAt(natural_parent(alice,bob),0).
+holdsAt(adoptive_parent(chloe,david),0).
+
+derivedAt(parentship,T) :- not 1{derivedAt(legal_parent(P,P),T) : person(P)}, time(T).
+:- not derivedAt(parentship,T), time(T).
+
+fluent(in_school(Child)) :- person(Child).
+fluent(is_parent(Parent)) :- person(Parent).
+derivedAt(is_parent(Parent),T) :- time(T), person(Parent), person(Child), derivedAt(legal_parent(Parent,Child),T).
+
+#show derivedAt/2.
+
+
+
