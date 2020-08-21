@@ -2,9 +2,9 @@
 clipped(T1,F,T2) :- time(T1), time(T), time(T2), % NOTE: adding event(E) causes loop
   T1 <= T, % TODO: why not T1 = T?  maybe because of time-gaps?
   T  <  T2,
-  happens(E,T),
-  terminates(E,F,T),
-  not initiates(E,F,T). % creation preferred over termination
+  happensAt(E,T), possibleAt(E,T),
+  terminatesAt(E,F,T),
+  not initiatesAt(E,F,T). % creation preferred over termination
 
 holdsAt(F,T2) :- time(T1), time(T2), 
   T1 < T2,
@@ -13,13 +13,27 @@ holdsAt(F,T2) :- time(T1), time(T2),
 
 holdsAt(F,T2) :- time(T1), time(T2), % NOTE: adding event(E) causes loop 
   T1 < T2, 
-  happens(E,T1), 
-  initiates(E,F,T1), 
+  happensAt(E,T1), possibleAt(E,T1),
+  initiatesAt(E,F,T1), 
   not clipped(T1,F,T2).
+  
+holdsAt(F,0) :- initial(F).
 
+% event possibilities
+
+:- happensAt(E,T), not possibleAt(E,T).
+
+% derived fluents
 derivedAt(X,T) :- holdsAt(X,T).
 
-fluent(X) :- person(X).
+% permissions
+fluent(X) :- permission(X).
+
+% obligations
+fluent(X) :- obligation(X).
+violatedAt(O,T) :- time(T), obligation(O), obligation_of_act(O,A), action(A), violation_cond(O,F),derivedAt(F,T),derivedAt(O,T).
+terminatesAt(A,O,T) :- action(A), time(T), obligation(O), obligation_of_act(O,A).
+
 person(alice).
 person(bob).
 person(chloe).
@@ -36,10 +50,6 @@ fluent(legal_parent(Parent,Child))    :- person(Parent), person(Child).
 derivedAt(legal_parent(Parent,Child),T) :- derivedAt(natural_parent(Parent,Child),T).
 derivedAt(legal_parent(Parent,Child),T) :- derivedAt(adoptive_parent(Parent,Child),T).
 
-time(0..5).
-holdsAt(natural_parent(alice,bob),0).
-holdsAt(adoptive_parent(chloe,david),0).
-
 derivedAt(parentship,T) :- not 1{derivedAt(legal_parent(P,P),T) : person(P)}, time(T).
 :- not derivedAt(parentship,T), time(T).
 
@@ -47,7 +57,62 @@ fluent(in_school(Child)) :- person(Child).
 fluent(is_parent(Parent)) :- person(Parent).
 derivedAt(is_parent(Parent),T) :- time(T), person(Parent), person(Child), derivedAt(legal_parent(Parent,Child),T).
 
-#show derivedAt/2.
+possibleAt(join_school(Child),T) :- time(T), person(Child),
+  not derivedAt(in_school(Child),T), 
+  not derivedAt(is_parent(Child),T).
+initiatesAt(join_school(Child), in_school(Child), T) :- time(T), person(Child).
 
+derivedAt(parents_not_in_school,T) :- time(T),
+  not 1{derivedAt(legal_parent(P1,P2),T) : person(P1), person(P2), derivedAt(in_school(P1),T)}.
+:- not derivedAt(parents_not_in_school,T), time(T).
+
+action(ask_for_help(C,P)) :- person(C), person(P), C!=P.
+actor_of(ask_for_help(C,P),C) :- person(C), person(P), C!=P.
+initiatesAt(ask_for_help(Child,Parent),help_with_homework(Parent,Child),T) :- 
+  time(T), person(Parent), person(Child), Child!=Parent.
+possibleAt(ask_for_help(C,P),T) :- person(C), person(P), C!=P, time(T).
+permission(ask_for_help(Child,Parent)) :- person(Child), person(Parent), Child!=Parent.
+permission_of_act(ask_for_help(C,P),ask_for_help(C,P)) :- person(C), person(P), C!=P.
+derivedAt(ask_for_help(C,P),T) :- person(C), person(P), C!=P, time(T),
+  derivedAt(legal_parent(P,C),T),
+  not derivedAt(homework_due(C),T),
+  not derivedAt(help_with_homework(P,C),T).
+holder(ask_for_help(Child,Parent),Child) :- person(Child), person(Parent).
+claimant(ask_for_help(Child,Parent),Parent) :- person(Parent), person(Child).
+
+possibleAt(homework_deadline,T) :- time(T).
+initiatesAt(homework_deadline,homework_due(Child),T) :- time(T), person(Child),
+  derivedAt(in_school(Child),T).
+
+obligation(help_with_homework(P,C)) :- person(P), person(C), C!=P.
+holder(help_with_homework(P,C),P) :- person(P), person(C).
+claimant(help_with_homework(P,C),C) :- person(P), person(C).
+violation_cond(help_with_homework(P,C), homework_due(C)) :- person(C), person(P), P!=C.
+obligation_of_act(help_with_homework(P,C),help(P,C)) :- person(P), person(C), P!=C.
+
+action(help(P,C)) :- person(P), person(C), C!=P.
+actor_of(help(P,C),P) :- person(P), person(C), C!= P.
+possibleAt(help(P,C),T) :- person(P), person(C), C!=P, time(T).
+permission(help(P,C)) :- person(P), person(C), C!=P, time(T).
+permission_of_act(help(P,C),help(P,C)) :- person(P), person(C), C!=P.
+derivedAt(help(P,C),T) :- person(P), person(C), C!=P, time(T),
+  derivedAt(legal_parent(P,C),T).
+holder(help(P,C),P) :- person(P), person(C), C!=P.
+claimant(help(P,C),C) :- person(P), person(C), C!=P.
+  
+% scenario 
+
+time(0..9).
+initial(natural_parent(alice,bob)).
+initial(adoptive_parent(chloe,david)).
+% initial(adoptive_parent(david,david)).
+% happensAt(join_school(alice),1).
+happensAt(join_school(bob),0).
+happensAt(join_school(david),0).
+happensAt(ask_for_help(bob,alice),1).
+happensAt(homework_deadline,3).
+
+#show derivedAt/2.
+#show violatedAt/2.
 
 

@@ -25,7 +25,7 @@ Invariant parents-not-in-school : (Forall person1:
           
 Act ask-for-help
   Actor      child
-  Recipient  parent
+  Recipient  parent When child != parent
   Creates    help-with-homework(parent,child)
   Holds when Holds(legal-parent(parent,child))
           && Not(Holds(homework-due(child))) // to satisfy safety property 1
@@ -35,12 +35,12 @@ Fact homework-due Identified by child
 
 Duty help-with-homework
   Holder        parent
-  Claimant      child
+  Claimant      child When child != parent
   Violated when Holds(homework-due(child))
   
 Act help 
   Actor      parent 
-  Recipient  child
+  Recipient  child When child != parent
   Terminates help-with-homework(parent,child)
   Holds when Holds(legal-parent(parent,child))
   
