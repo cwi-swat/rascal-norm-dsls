@@ -23,12 +23,17 @@ triggerAt(E,T) :- forceAt(E,T).
 happensAt(E,T) :- triggerAt(E,T), not action(E).
 happensAt(E,T) :- triggerAt(E,T), action(E), permission(P), permission_of_act(P,E), derivedAt(P,T).
 
+% :- time(T), not 1{triggerAt(E,T) : event(E)}.
+
 % event possibilities
 
 :- happensAt(E,T), not possibleAt(E,T).
 
 % derived fluents
 derivedAt(X,T) :- holdsAt(X,T).
+
+% actions
+event(X) :- action(X).
 
 % permissions
 
@@ -62,6 +67,7 @@ is_parent(Parent) :- person(Parent).
 homework_due(Child) :- person(Child).
 derivedAt(is_parent(Parent),T) :- time(T), person(Parent), person(Child), derivedAt(legal_parent(Parent,Child),T).
 
+event(join_school(C)) :- person(C).
 possibleAt(join_school(Child),T) :- time(T), person(Child),
   not derivedAt(in_school(Child),T), 
   not derivedAt(is_parent(Child),T).
@@ -86,6 +92,7 @@ derivedAt(ask_for_help(C,P),T) :- person(C), person(P), C!=P, time(T),
 holder(ask_for_help(Child,Parent),Child) :- person(Child), person(Parent).
 claimant(ask_for_help(Child,Parent),Parent) :- person(Parent), person(Child).
 
+event(homework_deadline).
 possibleAt(homework_deadline,T) :- time(T).
 initiatesAt(homework_deadline,homework_due(Child),T) :- time(T), person(Child),
   derivedAt(in_school(Child),T).
@@ -106,7 +113,7 @@ derivedAt(help(P,C),T) :- person(P), person(C), C!=P, time(T),
 holder(help(P,C),P) :- person(P), person(C), C!=P.
 claimant(help(P,C),C) :- person(P), person(C), C!=P.
   
-  
+event(new_homework).  
 possibleAt(new_homework,T) :- time(T).
 terminatesAt(new_homework, homework_due(Child), T) :- time(T), homework_due(Child).
 
@@ -143,5 +150,3 @@ triggerAt(help(alice,bob),6).
 #show violatedAt/2.
 #show invariantViolatedAt/2.
 #show safetyViolatedAt/2.
-
-
