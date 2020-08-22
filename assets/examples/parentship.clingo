@@ -31,14 +31,12 @@ happensAt(E,T) :- triggerAt(E,T), action(E), permission(P), permission_of_act(P,
 derivedAt(X,T) :- holdsAt(X,T).
 
 % permissions
-fluent(X) :- permission(X).
 
 % prohibitions
 violatedAt(P,T) :- time(T), permission_of_act(P,A), not derivedAt(P,T), triggerAt(A,T).
 
 
 % obligations
-fluent(X) :- obligation(X).
 violatedAt(O,T) :- time(T), obligation(O), obligation_of_act(O,A), action(A), violation_cond(O,F),derivedAt(F,T),derivedAt(O,T).
 terminatesAt(A,O,T) :- action(A), time(T), obligation(O), obligation_of_act(O,A).
 
@@ -49,9 +47,9 @@ terminatesAt(A,O,T) :- action(A), time(T), obligation(O), obligation_of_act(O,A)
 % #domain person(Parent).
 % #domain person(Child).
 
-fluent(natural_parent(Parent,Child))  :- person(Parent), person(Child). 
-fluent(adoptive_parent(Parent,Child)) :- person(Parent), person(Child). 
-fluent(legal_parent(Parent,Child))    :- person(Parent), person(Child). 
+natural_parent(Parent,Child)  :- person(Parent), person(Child). 
+adoptive_parent(Parent,Child) :- person(Parent), person(Child). 
+legal_parent(Parent,Child)    :- person(Parent), person(Child). 
 
 derivedAt(legal_parent(Parent,Child),T) :- derivedAt(natural_parent(Parent,Child),T).
 derivedAt(legal_parent(Parent,Child),T) :- derivedAt(adoptive_parent(Parent,Child),T).
@@ -59,8 +57,9 @@ derivedAt(legal_parent(Parent,Child),T) :- derivedAt(adoptive_parent(Parent,Chil
 derivedAt(parentship,T) :- not 1{derivedAt(legal_parent(P,P),T) : person(P)}, time(T).
 invariantViolatedAt(parentship,T) :- time(T), not derivedAt(parentship,T).
 
-fluent(in_school(Child)) :- person(Child).
-fluent(is_parent(Parent)) :- person(Parent).
+in_school(Child) :- person(Child).
+is_parent(Parent) :- person(Parent).
+homework_due(Child) :- person(Child).
 derivedAt(is_parent(Parent),T) :- time(T), person(Parent), person(Child), derivedAt(legal_parent(Parent,Child),T).
 
 possibleAt(join_school(Child),T) :- time(T), person(Child),
@@ -107,6 +106,15 @@ derivedAt(help(P,C),T) :- person(P), person(C), C!=P, time(T),
 holder(help(P,C),P) :- person(P), person(C), C!=P.
 claimant(help(P,C),C) :- person(P), person(C), C!=P.
   
+  
+possibleAt(new_homework,T) :- time(T).
+terminatesAt(new_homework, homework_due(Child), T) :- time(T), homework_due(Child).
+
+% verification
+
+safetyViolatedAt(parent_fairness,T) :- person(C), person(P), C!=P, 
+  happensAt(ask_for_help(C,P),T), derivedAt(homework_due(C),T+1).
+  
 % refinement
 person(alice).
 person(bob).
@@ -120,17 +128,20 @@ initial(adoptive_parent(chloe,david)).
   
 % scenario 
 
-time(0..5).
+time(0..6).
 triggerAt(join_school(bob),0).
 triggerAt(join_school(david),0).
 triggerAt(ask_for_help(bob,alice),1).
 triggerAt(help(alice,bob),2).
 triggerAt(homework_deadline,3).
+triggerAt(new_homework,3).
+triggerAt(homework_deadline,4). % how to explore all scenarios with 4 OR 5
+triggerAt(ask_for_help(bob,alice),5).
+triggerAt(help(alice,bob),6).
 
 % #show derivedAt/2.
-
 #show violatedAt/2.
-
 #show invariantViolatedAt/2.
+#show safetyViolatedAt/2.
 
 
