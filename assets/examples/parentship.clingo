@@ -42,10 +42,8 @@ fluent(X) :- obligation(X).
 violatedAt(O,T) :- time(T), obligation(O), obligation_of_act(O,A), action(A), violation_cond(O,F),derivedAt(F,T),derivedAt(O,T).
 terminatesAt(A,O,T) :- action(A), time(T), obligation(O), obligation_of_act(O,A).
 
-person(alice).
-person(bob).
-person(chloe).
-person(david).
+
+% model
 
 % #domain person(Person).
 % #domain person(Parent).
@@ -59,7 +57,7 @@ derivedAt(legal_parent(Parent,Child),T) :- derivedAt(natural_parent(Parent,Child
 derivedAt(legal_parent(Parent,Child),T) :- derivedAt(adoptive_parent(Parent,Child),T).
 
 derivedAt(parentship,T) :- not 1{derivedAt(legal_parent(P,P),T) : person(P)}, time(T).
-invariantViolatedAt(parentship,T) :- not derivedAt(parentship,T), time(T).
+invariantViolatedAt(parentship,T) :- time(T), not derivedAt(parentship,T).
 
 fluent(in_school(Child)) :- person(Child).
 fluent(is_parent(Parent)) :- person(Parent).
@@ -72,7 +70,8 @@ initiatesAt(join_school(Child), in_school(Child), T) :- time(T), person(Child).
 
 derivedAt(parents_not_in_school,T) :- time(T),
   not 1{derivedAt(legal_parent(P1,P2),T) : person(P1), person(P2), derivedAt(in_school(P1),T)}.
-invariantViolatedAt(parents_not_in_school,T) :- not derivedAt(parents_not_in_school,T), time(T).
+invariantViolatedAt(parents_not_in_school,T) :- time(T),
+  not derivedAt(parents_not_in_school,T).
 
 action(ask_for_help(C,P)) :- person(C), person(P), C!=P.
 actor_of(ask_for_help(C,P),C) :- person(C), person(P), C!=P.
@@ -108,16 +107,24 @@ derivedAt(help(P,C),T) :- person(P), person(C), C!=P, time(T),
 holder(help(P,C),P) :- person(P), person(C), C!=P.
 claimant(help(P,C),C) :- person(P), person(C), C!=P.
   
-% scenario 
-
-time(0..5).
+% refinement
+person(alice).
+person(bob).
+person(chloe).
+person(david).
+  
+% initial state
 initial(natural_parent(alice,bob)).
 initial(adoptive_parent(chloe,david)).
 % initial(adoptive_parent(david,david)).
-% happensAt(join_school(alice),1).
+  
+% scenario 
+
+time(0..5).
 triggerAt(join_school(bob),0).
 triggerAt(join_school(david),0).
-triggerAt(ask_for_help(david,alice),1).
+triggerAt(ask_for_help(bob,alice),1).
+triggerAt(help(alice,bob),2).
 triggerAt(homework_deadline,3).
 
 % #show derivedAt/2.
