@@ -20,7 +20,7 @@ syntax Statement = "+" OptForeach
 
 syntax Placeholder = "Placeholder" ID "For" ID;
 syntax TypeDecl 
-  = "Fact" ID "Identified by" TypeExpression InstanceConstraint? DerivationClause?
+  = "Fact" ID ("Identified by" TypeExpression)? InstanceConstraint? DerivationClause?
   | "Act" ID "Actor" Var ("Recipient" Var)? RelatedTo? InstanceConstraint? PreConditions? PostConditions DerivationClause?
   | "Event" ID RelatedTo? InstanceConstraint? PostConditions DerivationClause?
   | "Duty" ID "Holder" Var "Claimant" Var RelatedTo? InstanceConstraint? DerivationClause? ViolationClause?

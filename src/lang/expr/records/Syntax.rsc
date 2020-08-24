@@ -2,15 +2,12 @@ module lang::expr::records::Syntax
 
 extend lang::std::Layout;
 
-import ParseTree;
-
 lexical Integer = [0-9]+ !>> [0-9];
 lexical Letter = [a-zA-Z];
 lexical Cap    = [A-Z];
 lexical Lower  = [a-z];
 lexical ID = Lower IdChar* !>> [A-Za-z0-9_\-] ;
 lexical Identifier = ID;
-lexical TypeId = ID;
 lexical IdChar = (Letter | [0-9] | [_\-]);
 lexical String = Cap IdChar*;
 lexical StringLiteral = String \ Keywords;
@@ -18,7 +15,7 @@ lexical Literal = StringLiteral | Integer;
 lexical Decoration = Integer? "\'"*; 
 lexical Var = ID Decoration;
 
-syntax TypeExpression = "String" | "Int" | { Literal ","}+ | {TypeId "*"}+;
+syntax TypeExpression = "String" | "Int" | { Literal ","}+ | {Var "*"}+;
 
 
 syntax InstExpression = Integer | StringLiteral | Var | bracket "(" InstExpression ")"
