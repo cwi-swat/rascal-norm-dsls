@@ -1,0 +1,47 @@
+% event calculus axioms
+clipped(T1,F,T2) :- time(T1), time(T), time(T2), % NOTE: adding event(E) causes loop
+  T1 <= T, % TODO: why not T1 = T?  maybe because of time-gaps?
+  T  <  T2,
+  happensAt(E,T), possibleAt(E,T),
+  terminatesAt(E,F,T),
+  not initiatesAt(E,F,T). % creation preferred over termination
+
+holdsAt(F,T2) :- time(T1), time(T2), 
+  T1 < T2,
+  holdsAt(F,T1), 
+  not clipped(T1,F,T2).
+
+holdsAt(F,T2) :- time(T1), time(T2), % NOTE: adding event(E) causes loop 
+  T1 < T2, 
+  happensAt(E,T1), possibleAt(E,T1),
+  initiatesAt(E,F,T1), 
+  not clipped(T1,F,T2).
+  
+holdsAt(F,0) :- initial(F).
+happensAt(E,T) :- forceAt(E,T).
+triggerAt(E,T) :- forceAt(E,T).
+happensAt(E,T) :- triggerAt(E,T), not action(E).
+happensAt(E,T) :- triggerAt(E,T), action(E), permission(P), permission_of_act(P,E), derivedAt(P,T).
+
+% :- time(T), not 1{triggerAt(E,T) : event(E)}.
+
+% event possibilities
+
+:- happensAt(E,T), not possibleAt(E,T).
+
+% derived fluents
+derivedAt(X,T) :- holdsAt(X,T).
+
+% actions
+event(X) :- action(X).
+
+% permissions
+
+% prohibitions
+violatedAt(P,T) :- time(T), permission_of_act(P,A), not derivedAt(P,T), triggerAt(A,T).
+
+
+% obligations
+violatedAt(O,T) :- time(T), obligation(O), obligation_of_act(O,A), action(A), violation_cond(O,F),derivedAt(F,T),derivedAt(O,T).
+terminatesAt(A,O,T) :- action(A), time(T), obligation(O), obligation_of_act(O,A).
+

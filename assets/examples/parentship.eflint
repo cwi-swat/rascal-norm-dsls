@@ -1,3 +1,4 @@
+
 Fact person           Identified by String
 Placeholder parent    For person
 Placeholder child     For person
@@ -7,7 +8,7 @@ Fact adoptive-parent  Identified by parent * child
 Fact legal-parent     Identified by parent * child
   Holds when Holds(adoptive-parent(parent,child)) 
           || Holds(natural-parent(parent,child))
-Invariant parentship : Not(Exists person : legal-parent(person,person))
+Invariant parentship : Not(Exists person : Holds(legal-parent(person,person)))
   
 Fact in-school Identified by child
 Fact is-parent Identified by parent 
@@ -16,8 +17,8 @@ Fact is-parent Identified by parent
 Event join-school 
   Related to child
   Creates in-school()
-  Holds when Not(in-school())
-          && Not(is-parent())
+  Holds when Not(Holds(in-school()))
+          && Not(Holds(is-parent()))
 
 Invariant parents-not-in-school : (Forall person1:
   Not(Exists person2: Holds(legal-parent(person1, person2))) 
@@ -61,3 +62,4 @@ Fact person Identified by Alice, Bob, Chloe, David
 
 // liveness property 1
 // "when a legal-parent receives the duty to help, they are eventually able to help (and to remove the duty)"
+
