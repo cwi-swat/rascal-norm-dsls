@@ -16,12 +16,12 @@ lexical String = Cap IdChar*;
 lexical StringLiteral = String \ Keywords;
 lexical Literal = StringLiteral | Integer;
 lexical Decoration = Integer? "\'"*; 
+lexical Var = ID Decoration;
 
-syntax TypeExpression = "String" | "Int" | Literal ("," Literal)* | TypeId ("*" TypeId)*;
+syntax TypeExpression = "String" | "Int" | { Literal ","}+ | {TypeId "*"}+;
 
-syntax Var = ID Decoration;
 
-syntax InstExpression = Integer | StringLiteral | Var | "(" InstExpression ")" 
+syntax InstExpression = Integer | StringLiteral | Var | bracket "(" InstExpression ")"
                   > "Sum" Foreach
                   | "Count" Foreach
                   > InstExpression "." Var
@@ -42,20 +42,20 @@ syntax BoolExpression = "True" | "False" | "(" BoolExpression ")"
                   | "Enabled" InstExpression
                   > left (BoolExpression "||" BoolExpression
                   |       BoolExpression "&&" BoolExpression)
-                  > non-assoc InstExpression "==" InstExpression
-                  | non-assoc InstExpression "!=" InstExpression
-                  | non-assoc InstExpression "\<"  InstExpression 
-                  | non-assoc InstExpression "\>"  InstExpression
+                  > non-assoc (InstExpression "==" InstExpression
+                            || InstExpression "!=" InstExpression
+                            || InstExpression "\<"  InstExpression 
+                            || InstExpression "\>"  InstExpression)
                   > left BoolExpression "When" BoolExpression
-                  > "(" "Exists" Var ("," Var)* ":" BoolExpression ")"
-                  | "(" "Forall" Var ("," Var)* ":" BoolExpression ")"
+                  | "(" "Exists" {Var ","}+ ":" BoolExpression ")"
+                  | "(" "Forall" {Var ","}+ ":" BoolExpression ")"
                   ; 
 
-syntax Foreach = "(" "Foreach" Var ("," Var)* ":" InstExpression ")";
+syntax Foreach = "(" "Foreach" {Var ","}+ ":" InstExpression ")";
 syntax OptForeach = Foreach | InstExpression;
 syntax Application = ID "(" Arguments ")";
-syntax Arguments = Modifier ("," Modifier)* 
-                 | InstExpression ("," InstExpression)*;
+syntax Arguments = { Modifier ","}* 
+                 | { InstExpression ","}+;
 syntax Modifier = Var "=" InstExpression;
 
 keyword Keywords = TypeKeywords | ExprKeywords;

@@ -4,8 +4,8 @@ extend lang::std::Layout;
 
 extend lang::expr::records::Syntax;
 
-syntax Spec = Standard Decl Standard;
-syntax Script = Standard Command Standard;
+start syntax Spec = Decl;
+start syntax Script = Command;
 
 syntax Decl = TypeDecl | Placeholder | assoc Decl Decl;
 
@@ -28,16 +28,16 @@ syntax TypeDecl
   | "Invariant" ID ":" BoolExpression
   ;
   
-syntax RelatedTo = "Related to" Var ("," Var)*;  
-syntax PreConditions = "Conditioned by" BoolExpression ("," BoolExpression)*;
+syntax RelatedTo = "Related to" {Var ","}+;  
+syntax PreConditions = "Conditioned by" {BoolExpression ","}+;
 syntax PostConditions = Terminates? Creates?;
-syntax Terminates = "Terminates" OptForeach ("," OptForeach)*;
-syntax Creates    = "Creates" OptForeach ("," OptForeach)*;
+syntax Terminates = "Terminates" {OptForeach ","}+;
+syntax Creates    = "Creates" {OptForeach ","}+;
   
 syntax InstanceConstraint = "When" BoolExpression;
 syntax DerivationClause  = "Derived from" OptForeach
                          | "Holds when" BoolExpression;
-syntax ViolationClause   = "Violated when" BoolExpression ("," BoolExpression)*;
+syntax ViolationClause   = "Violated when" {BoolExpression ","}+;
 
 keyword Keywords = TypeKeywords | ExprKeywords | Keywords;
 keyword ExprKeywords =  "Holds" | "Violated" | "Exists" ;
