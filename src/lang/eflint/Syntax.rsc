@@ -21,7 +21,7 @@ syntax Statement = "+" OptForeach
 syntax Placeholder = "Placeholder" ID "For" ID;
 syntax TypeDecl 
   = "Fact" ID ("Identified by" TypeExpression)? InstanceConstraint? DerivationClause?
-  | "Act" ID "Actor" Var ("Recipient" Var)? RelatedTo? InstanceConstraint? PreConditions? PostConditions DerivationClause?
+  | "Act" ID "Actor" Var ("Recipient" Var)? RelatedTo? InstanceConstraint? PostConditions DerivationClause?
   | "Event" ID RelatedTo? InstanceConstraint? PostConditions DerivationClause?
   | "Duty" ID "Holder" Var "Claimant" Var RelatedTo? InstanceConstraint? DerivationClause? ViolationClause?
   | "Predicate" ID "When" BoolExpression
@@ -29,7 +29,6 @@ syntax TypeDecl
   ;
   
 syntax RelatedTo = "Related to" {Var ","}+;  
-syntax PreConditions = "Conditioned by" {BoolExpression ","}+;
 syntax PostConditions = Terminates? Creates?;
 syntax Terminates = "Terminates" {OptForeach ","}+;
 syntax Creates    = "Creates" {OptForeach ","}+;
@@ -39,8 +38,6 @@ syntax DerivationClause  = "Derived from" OptForeach
                          | "Holds when" BoolExpression;
 syntax ViolationClause   = "Violated when" {BoolExpression ","}+;
 
-keyword Keywords = TypeKeywords | ExprKeywords | Keywords;
-keyword ExprKeywords =  "Holds" | "Violated" | "Exists" ;
 keyword Keywords = "Event" | "Act" | "Fact" | "Duty"
                  | "Invariant" | "Predicate" | "Placeholder" | "For"
                  | "Actor" | "Recipient" | "Holder" | "Claimant"

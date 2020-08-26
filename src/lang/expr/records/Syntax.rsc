@@ -13,7 +13,7 @@ lexical String = Cap IdChar*;
 lexical StringLiteral = String \ Keywords;
 lexical Literal = StringLiteral | Integer;
 lexical Decoration = Integer? "\'"*; 
-lexical Var = ID Decoration;
+lexical Var = ID id Decoration dec;
 
 syntax TypeExpression = "String" | "Int" | { Literal ","}+ | {Var "*"}+;
 
@@ -30,13 +30,11 @@ syntax InstExpression = Integer | StringLiteral | Var | bracket "(" InstExpressi
                   > left InstExpression "When" BoolExpression
                   ; 
 
-syntax BoolExpression = "True" | "False" | "(" BoolExpression ")" 
-                  > 
-                  | "!" BoolExpression
+syntax BoolExpression = "True" | "False" | bracket "(" BoolExpression ")" 
+                  > "!" BoolExpression
                   | "Not" BoolExpression
                   | "Holds" InstExpression
                   | "Violated" InstExpression
-                  | "Enabled" InstExpression
                   > left (BoolExpression "||" BoolExpression
                   |       BoolExpression "&&" BoolExpression)
                   > non-assoc (InstExpression "==" InstExpression
