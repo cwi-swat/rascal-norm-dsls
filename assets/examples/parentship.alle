@@ -1,0 +1,109 @@
+// Static facts: facts that do not change over time
+Person (pId:id)                      = {<alice>,<bob>,<chloe>,<david>}
+Parent (parent:id)                   = {<alice>,<chloe>}
+Child (child:id)                     = {<bob>,<david>}
+naturalParent(parent:id, child:id)   = {<alice,bob>}
+adoptiveParent(parent:id, child:id)  = {<chloe,david>}
+
+// Transition system setup
+Time  (time:id) <= {<t1>..<t5>}
+First (time:id) = {<t1>}
+step  (cur:id,nxt:id) <= {<t1,t2>,<t2,t3>,<t3,t4>,<t4,t5>}
+
+// Dynamic facts: facts that can change over time
+//askForHelp (time:id, child:id, parent:id)         <= {<t1,bob,alice>..<t5,bob,alice>,<t1,bob,chloe>..<t5,bob,chloe>,
+//                                                      <t1,david,alice>..<t5,david,alice>,<t1,david,chloe>..<t5,david,chloe>}
+//                                         
+helpWithHomework (time:id, child:id, parent:id)   <= {<t1,bob,alice>..<t5,bob,alice>,<t1,bob,chloe>..<t5,bob,chloe>,
+                                                      <t1,david,alice>..<t5,david,alice>,<t1,david,chloe>..<t5,david,chloe>}
+                                                      
+homeworkDue (time:id, child:id)                   <= {<t1,bob>..<t5,bob>,<t1,david>..<t5,david>}
+
+// Action setup
+Action (action:id) = {<askforhelp>,<help>,<makehomeworkdue>}
+AskForHelp (action:id) = {<askforhelp>}
+Help (action:id) = {<help>}
+MakeHomeworkDue (action:id) = {<makehomeworkdue>}
+performedAction (cur:id,nxt:id,action:id)         <= {<t1,t2,askforhelp>,<t2,t3,askforhelp>,<t3,t4,askforhelp>,<t4,t5,askforhelp>,
+                                                      <t1,t2,help>,<t2,t3,help>,<t3,t4,help>,<t4,t5,help>,
+                                                      <t1,t2,makehomeworkdue>,<t2,t3,makehomeworkdue>,<t3,t4,makehomeworkdue>,<t4,t5,makehomeworkdue>} 
+
+// 'Type' constraints
+step ⊆ Time[time as cur] ⨯ Time[time as nxt]
+∀ t ∈ Time | t ⊆ (First[time as cur] ⨝ *<cur,nxt>step)[nxt->time] // all steps are connected
+
+helpWithHomework ⊆ Time ⨯ Child ⨯ Parent
+homeworkDue ⊆ Time ⨯ Child
+
+performedAction ⊆ step ⨯ Action
+
+// Derived fact
+pred isLegalParent[parent: (parent:id), child: (child:id)] =
+  parent ⨯ child ⊆ (naturalParent ∪ adoptiveParent)
+  
+pred isHomeworkDue[moment: (time:id), child: (child:id)] =
+  moment ⨯ child ⊆ homeworkDue
+
+pred dutyToHelp[moment: (time:id), child: (child:id), parent: (parent:id)] =
+  moment ⨯ child ⨯ parent ⊆ helpWithHomework
+
+// Violation queries
+pred isHelpWithHomeworkViolated[moment: (time:id)] =
+  ∃ child ∈ Child, parent ∈ Parent | isHomeworkDue[moment, child] ∧ dutyToHelp[moment, child, parent]
+  
+pred askForHelpCreates[moment: (time:id), child: (child:id), parent: (parent:id)] =
+  let nxtMoment = (moment[time as cur] ⨝ step)[nxt->time] |
+    dutyToHelp[nxtMoment,child, parent] ∧ 
+    ∀ c2 ∈ Child, p2 ∈ Parent | (c2 ⨯ p2 ≠ (child ⨯ parent) ⇒ (helpWithHomework ⨝ (nxtMoment ⨯ c2 ⨯ p2))[child,parent] = (helpWithHomework ⨝ (moment ⨯ c2 ⨯ p2))[child,parent]) // frame other tuples  
+      
+// Action: ask-for-help
+pred askForHelp[moment: (time:id)] = 
+  ∃ child ∈ Child, parent ∈ Parent | 
+    isLegalParent[parent,child] ∧ askForHelpCreates[moment, child, parent]     
+
+pred helpTerminates[moment: (time:id), child: (child:id), parent: (parent:id)] =
+  let nxtMoment = (moment[time as cur] ⨝ step)[nxt->time] |
+    ¬ (nxtMoment ⨯ parent ⨯ child ⊆ helpWithHomework)  ∧ 
+    ∀ c2 ∈ Child, p2 ∈ Parent | (c2 ⨯ p2 ≠ (child ⨯ parent) ⇒ (helpWithHomework ⨝ (nxtMoment ⨯ c2 ⨯ p2))[child,parent] = (helpWithHomework ⨝ (moment ⨯ c2 ⨯ p2))[child,parent]) // frame other tuples
+  
+// Action: help
+pred help[moment: (time:id)] =
+  ∃ child ∈ Child, parent ∈ Parent | 
+   dutyToHelp[moment, child, parent] ∧ helpTerminates[moment, child, parent] 
+
+// Action: Make Homework due
+pred makeHomeworkDue[moment: (time:id)] =
+  let nxtMoment = (moment[time as cur] ⨝ step)[nxt->time] |
+    ∃ child ∈ Child | 
+      some ((moment ⨯ child) ⨝ helpWithHomework) ∧ 
+      (nxtMoment ⨯ child) ⊆ homeworkDue ∧
+      ∀ c2 ∈ Child ∖ child | (homeworkDue ⨝ (nxtMoment ⨯ c2))[child] = (homeworkDue ⨝ (moment ⨯ c2))[child] 
+
+pred frameHomeworkDue[step: (cur:id,nxt:id)] =
+  (homeworkDue ⨝ step[cur->time])[child] = (homeworkDue ⨝ step[nxt->time])[child]
+
+pred frameHelpWithHomework[step: (cur:id,nxt:id)] =
+  (helpWithHomework ⨝ step[cur->time])[child,parent] = (helpWithHomework ⨝ step[nxt->time])[child,parent]
+
+// Setup of transition system: with each passing of time an action must happen
+pred action[step: (cur:id,nxt:id), action: (action:id)] =
+  (performedAction ⨝ step)[action] = action
+  
+∀ s ∈ step | one (s ⨝ performedAction[cur,nxt])
+
+∀ s ∈ step | let moment = s[cur->time] |
+  (askForHelp[moment] ∧ action[s,AskForHelp] ∧ frameHomeworkDue[s]) ∨ 
+  (help[moment] ∧ action[s,Help] ∧ frameHomeworkDue[s]) ∨ 
+  (makeHomeworkDue[moment] ∧ action[s,MakeHomeworkDue] ∧ frameHelpWithHomework[s])
+
+// Initial state setup
+no (First ⨝ helpWithHomework)  
+no (First ⨝ homeworkDue)
+
+// Goal state
+∃ t ∈ Time | 
+  isHelpWithHomeworkViolated[t] ∧ 
+  (∃ futureMoment ∈ (t[time as cur] ⨝ ^<cur,nxt>step)[nxt->time] | ¬ isHelpWithHomeworkViolated[futureMoment])
+
+objectives: minimize Time[count()]
+  
