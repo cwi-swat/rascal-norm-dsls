@@ -9,7 +9,7 @@ import ParseTree;
 
 anno map[loc,str] Tree@docs;
  
-void main(){
+void main() {
   str lang = "eFlint";
 
   registerLanguage(lang,"eflint", parseSpec); 
