@@ -1,4 +1,3 @@
-
 Fact person           Identified by String
 Placeholder parent    For person
 Placeholder child     For person
@@ -6,8 +5,8 @@ Placeholder child     For person
 Fact natural-parent   Identified by parent * child
 Fact adoptive-parent  Identified by parent * child
 Fact legal-parent     Identified by parent * child
-  Holds when Holds(adoptive-parent(parent,child)) 
-          || Holds(natural-parent(parent,child))
+  Holds when adoptive-parent(parent,child)
+          || natural-parent(parent,child)
 Invariant parentship : Not(Exists person : Holds(legal-parent(person,person)))
   
 Fact in-school Identified by child
@@ -17,11 +16,11 @@ Fact is-parent Identified by parent
 Event join-school 
   Related to child
   Creates in-school()
-  Holds when Not(Holds(in-school()))
-          && Not(Holds(is-parent()))
+  Holds when Not(in-school())
+          && Not(is-parent())
 
 Invariant parents-not-in-school : (Forall person1:
-  Not(Exists person2: Holds(legal-parent(person1, person2))) 
+  Not(Exists person2: legal-parent(person1, person2))
   When Holds(in-school(person1))) 
           
 Act ask-for-help
@@ -29,24 +28,24 @@ Act ask-for-help
   Recipient  parent When child != parent
   Creates    help-with-homework(parent,child)
   Holds when Holds(legal-parent(parent,child))
-          && Not(Holds(homework-due(child))) // to satisfy safety property 1
-          && Not(Holds(help-with-homework(parent,child)))
+          && Not(homework-due(child)) // to satisfy safety property 1
+          && Not(help-with-homework(parent,child))
   
 Fact homework-due Identified by child
 
 Duty help-with-homework
   Holder        parent
   Claimant      child When child != parent
-  Violated when Holds(homework-due(child))
+  Violated when homework-due(child)
   
 Act help 
   Actor      parent 
   Recipient  child When child != parent
   Terminates help-with-homework(parent,child)
-  Holds when Holds(legal-parent(parent,child))
+  Holds when legal-parent(parent,child)
   
 Event homework-deadline
-  Creates (Foreach child : homework-due(child) When Holds(in-school(child)))
+  Creates (Foreach child : homework-due(child) When in-school(child))
   
 Event new-homework
   Terminates (Foreach homework-due: homework-due)

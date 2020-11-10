@@ -52,11 +52,18 @@ Event new-homework
   Terminates (Foreach homework-due: homework-due)
 
 // finitize domain
-Fact person Identified by Alice, Bob, Chloe, David
+Fact person Identified by Alice, Bob, Chloe, David.
 
-// safety property 1
-// "a legal-parent can not be asked to help with homework when homework is already due"
++natural-parent(Alice,Bob).
++adoptive-parent(Chloe, David).
 
-// liveness property 1
-// "when a legal-parent receives the duty to help, they are eventually able to help (and to remove the duty)"
+?legal-parent(Alice, Bob).
+?legal-parent(Chloe, David).
+?!legal-parent(Alice, Chloe).
+?!legal-parent(Alice, David).
+
+ask-for-help(Bob, Alice).
++homework-due(Bob).  // homework deadline passed
+?Violated(help-with-homework(Alice,Bob)).
+help(Alice,Bob).
 
